@@ -60,12 +60,12 @@ def defocus_kernel(d, sz=65):
 
 def main():
     import sys, getopt
-    opts, args = getopt.getopt(sys.argv[1:], '', ['circle', 'angle=', 'd=', 'snr='])
+    opts, args = getopt.getopt(sys.argv[1:], '', ['circle', 'angle=', 'd=', 'snr=', 'img='])
     opts = dict(opts)
     try:
         fn = args[0]
     except:
-        fn = 'licenseplate_motion.jpg'
+        fn = 'car_motion.JPG'
 
     win = 'deconvolution'
 
@@ -74,6 +74,7 @@ def main():
         print('Failed to load file:', fn)
         sys.exit(1)
 
+    img = cv.resize(img, (2000, 1667))
     img = np.float32(img)/255.0
     cv.imshow('input', img)
 
