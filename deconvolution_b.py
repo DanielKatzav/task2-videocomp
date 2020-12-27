@@ -65,53 +65,22 @@ def main():
     try:
         fn = args[0]
     except:
-        fn = 'car_motion.JPG'
+        fn = 'car_defocus.JPG'
 
     win = 'deconvolution'
 
-    img_bw = cv.imread(cv.samples.findFile(fn), cv.IMREAD_GRAYSCALE)
-    img_color = cv.imread(cv.samples.findFile(fn), cv.IMREAD_COLOR)
-
-    img_bw = cv.resize(img_bw, dsize=(640, 480))
-    img_color = cv.resize(img_color, dsize=(640, 480))
-
-    if img_bw is None and img_color is None:
+    img = cv.imread(cv.samples.findFile(fn), cv.IMREAD_GRAYSCALE)
+    if img is None:
         print('Failed to load file:', fn)
         sys.exit(1)
 
-    img_bw = np.float32(img_bw)/255.0
+    img = np.float32(img)/255.0
 
-    roi_bw = cv.selectROI(img_bw)
-    roi_color = cv.selectROI(img_color)
+    roi = cv.selectROI(img)
 
-    imCropped_bw = img_bw[int(roi_bw[1]):int(roi_bw[1]+roi_bw[3]), int(roi_bw[0]):int(roi_bw[0]+roi_bw[2])]
-    imCropped_color = img_color[int(roi_color[1]):int(roi_color[1]+roi_color[3]), int(roi_color[0]):int(roi_color[0]+roi_color[2])]
-
-
-    img_r = np.zeros_like(img_bw)
-    img_g = np.zeros_like(img_bw)
-    img_b = np.zeros_like(img_bw)
-
-    img_r = imCropped_color[..., 0]
-    img_g = imCropped_color[..., 1]
-    img_b = imCropped_color[..., 2]
-
-    imCropped_color = np.float32(imCropped_color)/255.0
-    img_bw = np.float32(img_bw)/255.0
-    img_r = np.float32(img_r)/255.0
-    img_g = np.float32(img_g)/255.0
-    img_b = np.float32(img_b)/255.0
-
-    img_bw = blur_edge(img_bw)
-    img_r = blur_edge(img_r)
-    img_g = blur_edge(img_g)
-    img_b = blur_edge(img_b)
-
-    IMG_BW = cv.dft(img_bw, flags=cv.DFT_COMPLEX_OUTPUT)
-    IMG_R = cv.dft(img_r, flags=cv.DFT_COMPLEX_OUTPUT)
-    IMG_G = cv.dft(img_g, flags=cv.DFT_COMPLEX_OUTPUT)
-    IMG_B = cv.dft(img_b, flags=cv.DFT_COMPLEX_OUTPUT)
-
+    imCropped = img[int(roi[1]):int(roi[1]+roi[3]), int(roi[0]):int(roi[0]+roi[2])]
+    imCropped = blur_edge(imCropped)
+    IMG = cv.dft(imCropped, flags=cv.DFT_COMPLEX_OUTPUT)
 
     defocus = '--circle' in opts
 
@@ -127,35 +96,17 @@ def main():
         cv.imshow('psf', psf)
 
         psf /= psf.sum()
-        psf_pad = np.zeros_like(roi_bw)
+        psf_pad = np.zeros_like(imCropped)
         kh, kw = psf.shape
         psf_pad[:kh, :kw] = psf
-
         PSF = cv.dft(psf_pad, flags=cv.DFT_COMPLEX_OUTPUT, nonzeroRows = kh)
         PSF2 = (PSF**2).sum(-1)
         iPSF = PSF / (PSF2 + noise)[...,np.newaxis]
-
-        RES_BW = cv.mulSpectrums(IMG_BW, iPSF, 0)
-        # RES_R = cv.mulSpectrums(IMG_R, iPSF, 0)
-        # RES_G = cv.mulSpectrums(IMG_G, iPSF, 0)
-        # RES_B = cv.mulSpectrums(IMG_B, iPSF, 0)
-
-        res_bw = cv.idft(RES_BW, flags=cv.DFT_SCALE | cv.DFT_REAL_OUTPUT )
-        # res_r = cv.idft(RES_R, flags=cv.DFT_SCALE | cv.DFT_REAL_OUTPUT)
-        # res_g = cv.idft(RES_G, flags=cv.DFT_SCALE | cv.DFT_REAL_OUTPUT)
-        # res_b = cv.idft(RES_B, flags=cv.DFT_SCALE | cv.DFT_REAL_OUTPUT)
-
-        # res_rgb = np.zeros_like(img_color)
-        # res_rgb[..., 0] = res_r
-        # res_rgb[..., 1] = res_g
-        # res_rgb[..., 2] = res_b
-
-        res_bw = np.roll(res_bw, -kh//2, 0)
-        res_bw = np.roll(res_bw, -kw//2, 1)
-        # res_rgb = np.roll(res_rgb, -kh // 2, 0)
-        # res_rgb = np.roll(res_rgb, -kw // 2, 1)
-        cv.imshow(win, res_bw)
-        # cv.imshow(win, res_rgb)
+        RES = cv.mulSpectrums(IMG, iPSF, 0)
+        res = cv.idft(RES, flags=cv.DFT_SCALE | cv.DFT_REAL_OUTPUT )
+        res = np.roll(res, -kh//2, 0)
+        res = np.roll(res, -kw//2, 1)
+        cv.imshow(win, res)
 
     cv.namedWindow(win)
     cv.namedWindow('psf', 0)
