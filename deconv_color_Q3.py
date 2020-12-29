@@ -73,8 +73,8 @@ if __name__ == '__main__':
     img_bw = cv2.imread(fn, 0)
     img_rgb = cv2.imread(fn, 1)
 
-    size = int(4000/2)
-    img_rgb = cv2.resize(img_rgb, (3000, size))
+    # size = int(4000/2)
+    # img_rgb = cv2.resize(img_rgb, (3000, size))
 
     # roi_bw = cv2.selectROI(img_bw)
     roi_rgb = cv2.selectROI(img_rgb)
@@ -113,6 +113,7 @@ if __name__ == '__main__':
 
     defocus = '--circle' in opts
     threshold = 5
+
     def update(_):
         ang = np.deg2rad( cv2.getTrackbarPos('angle', win) )
         d = cv2.getTrackbarPos('d', win)
@@ -122,7 +123,7 @@ if __name__ == '__main__':
             psf = defocus_kernel(d)
         else:
             psf = motion_kernel(ang, d)
-            
+
         cv2.imshow('psf', psf)
 
         psf /= psf.sum()
