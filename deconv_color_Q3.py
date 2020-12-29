@@ -61,7 +61,7 @@ def defocus_kernel(d, sz=65):
 if __name__ == '__main__':
     print(__doc__)
     import sys, getopt
-    opts, args = getopt.getopt(sys.argv[1:], '', ['circle', 'angle=', 'd=', 'snr='])
+    opts, args = getopt.getopt(sys.argv[1:], '', ['circle', 'angle=', 'd=', 'snr=', 'threshold='])
     opts = dict(opts)
     try:
         fn = args[0]
@@ -73,8 +73,8 @@ if __name__ == '__main__':
     img_bw = cv2.imread(fn, 0)
     img_rgb = cv2.imread(fn, 1)
 
-    size = int(4000/4)
-    img_rgb = cv2.resize(img_rgb, (1500, size))
+    size = int(4000/2)
+    img_rgb = cv2.resize(img_rgb, (3000, size))
 
     # roi_bw = cv2.selectROI(img_bw)
     roi_rgb = cv2.selectROI(img_rgb)
@@ -112,17 +112,17 @@ if __name__ == '__main__':
     IMG_B = cv2.dft(img_b, flags=cv2.DFT_COMPLEX_OUTPUT)
 
     defocus = '--circle' in opts
-
+    threshold = 5
     def update(_):
         ang = np.deg2rad( cv2.getTrackbarPos('angle', win) )
         d = cv2.getTrackbarPos('d', win)
-        noise = 10**(-0.1*cv2.getTrackbarPos('SNR (db)', win))
-        threshold = cv2.getTrackbarPos('threshold', win)
+        threshold = 0.05*cv2.getTrackbarPos('threshold', win)
 
         if defocus:
             psf = defocus_kernel(d)
         else:
             psf = motion_kernel(ang, d)
+            
         cv2.imshow('psf', psf)
 
         psf /= psf.sum()
@@ -131,8 +131,10 @@ if __name__ == '__main__':
         psf_pad[:kh, :kw] = psf
         PSF = cv2.dft(psf_pad, flags=cv2.DFT_COMPLEX_OUTPUT, nonzeroRows = kh)
         PSF2 = (PSF**2).sum(-1)
-        iPSF = PSF / (PSF2 + noise)[...,np.newaxis]
 
+        iPSF = PSF / (PSF2+0.001) [..., np.newaxis]
+
+        iPSF = np.where(abs(iPSF) >= threshold, (iPSF), 0)
 
         # RES_BW = cv2.mulSpectrums(IMG_BW, iPSF, 0)
         RES_R = cv2.mulSpectrums(IMG_R, iPSF, 0)
@@ -160,8 +162,7 @@ if __name__ == '__main__':
     cv2.namedWindow('psf', 0)
     cv2.createTrackbar('angle', win, int(opts.get('--angle', 135)), 180, update)
     cv2.createTrackbar('d', win, int(opts.get('--d', 22)), 80, update)
-    cv2.createTrackbar('SNR (db)', win, int(opts.get('--snr', 25)), 80, update)
-    cv2.createTrackbar('threshold', win, int(opts.get('--threshold', 25)), 75, update)
+    cv2.createTrackbar('threshold', win, int(opts.get('--threshold', 5)), 75, update)
     update(None)
 
     while True:
